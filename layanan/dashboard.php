@@ -1,4 +1,11 @@
 <?php
+session_start();
+
+if (!isset($_SESSION['log'])) {
+    // Jika session login tidak ada, redirect ke halaman login
+    header('Location: admin.php');
+    exit;
+}
 // Koneksi ke database
 $servername = "localhost";
 $username = "root";
@@ -249,9 +256,8 @@ $json_data = json_encode($data);
         <img class="logonavbar" src="gambar/layanan.png">
         <div class="navbar-nav">
             <a href="dashboard.php">Dashboard</a>
-            <a href="pengajuan.php">Pengajuan</a>
             <a href="status.php">Status</a>
-            <a href="admin.php">Logout</a>
+            <a href="admin-logout.php">Logout</a>
         </div>
 
     </nav>  

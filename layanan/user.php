@@ -1,35 +1,31 @@
 <?php
 require 'fungsi.php';
-session_start();
+session_start(); // Wajib di awal file untuk menggunakan session
 
-// Cek Login
-$errorlogin = '';
-
-if (isset($_POST['login'])){
+if (isset($_POST['login'])) {
     $username = $_POST['username'];
     $password = $_POST['password'];
 
-    // Cari admin ke Database
-    $cekdatabase = mysqli_query($koneksi,"SELECT * from admin WHERE username='$username' AND password='$password'");
-    // Hitung Jumlah Data
+    // Query untuk mencari user di database
+    $cekdatabase = mysqli_query($koneksi, "SELECT * FROM user WHERE username='$username'and password='$password'");
     $hitung = mysqli_num_rows($cekdatabase);
 
-    if($hitung>0){
-        $_SESSION['log'] = 'True';
-        $_SESSION['username'] = $username;
-        header('location:index.php');
+    if ($hitung>0) {
+        $user = mysqli_fetch_assoc($cekdatabase);
+        // Jika username dan password cocok
+        $_SESSION['log'] = true; // Tanda bahwa user sudah login
+        $_SESSION['username'] = $username; // Simpan username ke session
+        $_SESSION['user_id'] = $user['user_id']; // Simpan user_id ke session
+        header('Location: user-loginberhasil.php'); // Redirect ke dashboard
+        exit;
     } else {
-        header('location:admin-logingagal.php');
-    };
-};
-
-if(!isset($_SESSION['log'])){
-
-} else {
-    header('location:admin-loginberhasil.php');
-};
-
+        // Jika login gagal
+        header('Location: user-logingagal.php');
+        exit;
+    }
+}
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -83,7 +79,7 @@ if(!isset($_SESSION['log'])){
     </nav>
 
     <section class="pendaftaran" id="pendaftaran">
-<h2>Login <span>Admin</span></h2>
+<h2>Login <span>User</span></h2>
         <div class="row">
             <form method="post">
             <div class="input-group">
@@ -96,7 +92,7 @@ if(!isset($_SESSION['log'])){
             </div>
             <button type="submit" class="btn" name="login" id="login">Login</button>
             <br><br>
-            <div class="small">Belum punya akun? <a href="admin-register.php"><b>Daftar</b></a> di sini
+            <div class="small">Belum punya akun? <a href="user-register.php"><b>Daftar</b></a> di sini
             </form>
         </div>
     </section>

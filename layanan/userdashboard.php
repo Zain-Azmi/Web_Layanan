@@ -1,11 +1,15 @@
 <?php
+
 session_start();
 
 if (!isset($_SESSION['log'])) {
     // Jika session login tidak ada, redirect ke halaman login
-    header('Location: admin.php');
+    header('Location: user.php');
     exit;
 }
+
+// Ambil user_id dari session
+$user_id = $_SESSION['user_id'];
 // Koneksi ke database
 $servername = "localhost";
 $username = "root";
@@ -19,24 +23,57 @@ if ($koneksi->connect_error) {
     die("Connection failed: " . $koneksi->connect_error);
 }
 
-// Ambil ID RFC dari URL
-$rfc_id = $_GET['id']; // ID RFC dikirim melalui query string
+// Query untuk mengambil RFC berdasarkan user_id
+$rfcQuery = mysqli_query($koneksi, "SELECT * FROM request_for_change WHERE user_id = '$user_id'");
 
-// Query untuk mengambil data RFC berdasarkan ID
-$sql = "SELECT * FROM request_for_change WHERE id = ?";
-$stmt = $koneksi->prepare($sql);
-$stmt->bind_param("s", $rfc_id);  // "s" for string
-$stmt->execute();
-$result = $stmt->get_result();
+// Tampilkan data RFC
+$rfc = mysqli_fetch_assoc($rfcQuery);
 
-// Cek apakah data RFC ditemukan
-if ($result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-} else {
-    echo "Data tidak ditemukan.";
-    exit;
+// Hitung total RFC untuk user yang sedang login
+$sql_total = "SELECT COUNT(*) AS total_rfc FROM request_for_change WHERE user_id = '$user_id'";
+$result_total = $koneksi->query($sql_total);
+$total_rfc = ($result_total->num_rows > 0) ? $result_total->fetch_assoc()['total_rfc'] : 0;
+
+// Hitung jumlah RFC berdasarkan status untuk user yang sedang login
+$sql_status = "
+    SELECT 
+        status,
+        COUNT(*) AS count
+    FROM request_for_change
+    WHERE user_id = '$user_id'
+    GROUP BY status
+";
+$result_status = $koneksi->query($sql_status);
+
+// Simpan jumlah berdasarkan status dalam array
+$status_counts = [
+    'Menunggu Persetujuan' => 0,
+    'Dibatalkan' => 0,
+    'Diproses' => 0,
+    'Selesai' => 0,
+];
+
+if ($result_status->num_rows > 0) {
+    while ($row = $result_status->fetch_assoc()) {
+        $status_counts[$row['status']] = $row['count'];
+    }
 }
+
+// Ambil semua data RFC untuk user yang sedang login
+$sql = "SELECT * FROM request_for_change WHERE user_id = '$user_id'";
+$result = $koneksi->query($sql);
+
+// Konversi data ke JSON
+$data = [];
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $data[] = $row;
+    }
+}
+$json_data = json_encode($data);
+
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -164,7 +201,52 @@ if ($result->num_rows > 0) {
     }
 
 
-    
+    table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #333;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        thead {
+            background-color:#7C847F;
+            color: white;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            text-transform: uppercase;
+            font-size: 14px;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tbody tr:hover {
+            background-color: #ddd;
+        }
+        a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .table-container {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        .btn-action {
+            background-color: #7C847F;
+            color: white;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        
+
 </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -189,71 +271,50 @@ if ($result->num_rows > 0) {
         <a href="index.php" class="navbar-logo"></a>
         <img class="logonavbar" src="gambar/layanan.png">
         <div class="navbar-nav">
-        <a href="dashboard.php">Dashboard</a>
-            <a href="status.php">Status</a>
-            <a href="admin-logout.php">Logout</a>
+            <a href="userdashboard.php">Dashboard</a>
+            <a href="pengajuan.php">Pengajuan</a>
+            <a href="user-logout.php">Logout</a>
         </div>
 
     </nav>  
     <section class="pendaftaran" id="pendaftaran">
         <div class="row">
-        <form action="prosesrfc.php" method="POST" enctype="multipart/form-data">
-            <h2>Request <span>For Change
-            </span></h2>
-            <div class="input-group">
-                        <i data-feather="user"></i>
-                        <label for="id">Unique ID:</label>
-                        <input type="text" id="id" name="id" value="<?php echo $row['id']; ?>"readonly>
-                    </div>
-                    <div class="input-group">
-                        <label for="tanggal">Date of submission:</label>
-                        <input type="date" id="tanggal" name="tanggal" value="<?php echo $row['tanggal']; ?>" readonly>
-                    </div>
-                    <div class="input-group">
-                        <label for="owner">Change Owner:</label>
-                        <input type="text" id="owner" name="owner" value="<?php echo $row['owner']; ?>" readonly>
-                    </div>
-                    <div class="input-group">
-                        <label for="initiator">Initiator of the RFC:</label>
-                        <input type="text" id="initiator" name="initiator" value="<?php echo $row['initiator']; ?>" readonly>
-                    </div>
-                    <div class="input-group">
-                        <label for="priority">Proposed Change Priority:</label>
-                        <select id="priority" name="priority" disabled>
-                            <option value="1" <?php echo $row['priority'] == 1 ? 'selected' : ''; ?>>High</option>
-                            <option value="2" <?php echo $row['priority'] == 2 ? 'selected' : ''; ?>>Medium</option>
-                            <option value="3" <?php echo $row['priority'] == 3 ? 'selected' : ''; ?>>Low</option>
-                            <option value="4" <?php echo $row['priority'] == 4 ? 'selected' : ''; ?>>Urgent</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="description">Description of the Change being applied for:</label>
-                        <textarea id="description" name="description" readonly><?php echo $row['description']; ?></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="risk">Risk during the Implementation:</label>
-                        <textarea id="risk" name="risk" readonly><?php echo $row['risk']; ?></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="time">Time Schedule:</label>
-                        <input type="text" id="time" name="time" value="<?php echo $row['time']; ?>" readonly>
-                    </div>
-                    <div class="input-group">
-                        <label for="resources">Estimate of resources for the implementation:</label>
-                        <textarea id="resources" name="resources" readonly><?php echo $row['resources']; ?></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="budget">Budget:</label>
-                        <input type="text" id="budget" name="budget" value="<?php echo $row['budget']; ?>" readonly>
-                    </div>
-                    <div class="input-group">
-                        <i data-feather="home"></i>
-                        <label for="file">Additional supporting Documents:</label>
-                        <br>
-                        <p><a href="<?php echo $row['file_path']; ?>" target="_blank">Download</a></p>
-                    </div>
+        
+    </div>
+    <table class="summary-table">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Jumlah</th>
+            </tr>
+        </thead>
+        <tbody id="status-summary">
+            <!-- Data akan diisi oleh JavaScript -->
+        </tbody>
+    </table>
 
-            </form>
+    <!-- Tabel Detail RFC -->
+    <div class="table-container">
+        <table id="rfcTable">
+            <thead>
+                <tr>
+                    <th>Unique ID</th>
+                    <th>Date of Submission</th>
+                    <th>Change Owner</th>
+                    <th>Initiator</th>
+                    <th>Priority</th>
+                    <th>Time Schedule</th>
+                    <th>Budget</th>
+                    <th>Status</th>
+                    <th>Document</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="rfcTableBody">
+                <!-- Data akan diisi oleh JavaScript -->
+            </tbody>
+        </table>
+    </div>
         </div>
     </section>
     <footer>
@@ -289,6 +350,58 @@ textarea3.addEventListener('input', function () {
     this.style.height = this.scrollHeight + 'px'; // Set tinggi sesuai konten
 });
     </script>
-    
+    <script>
+        // Data JSON dari PHP
+        const data = <?php echo $json_data; ?>;
+
+        // Referensi untuk tabel status
+        const statusSummary = document.getElementById("status-summary");
+        const rfcTableBody = document.getElementById("rfcTableBody");
+
+        // Menghitung jumlah RFC berdasarkan status
+        const statusCounts = {
+            'Menunggu Persetujuan': 0,
+            'Dibatalkan': 0,
+            'Diproses': 0,
+            'Selesai': 0
+        };
+
+        // Isi tabel RFC dan hitung status
+        data.forEach(row => {
+            // Hitung status
+            if (statusCounts[row.status] !== undefined) {
+                statusCounts[row.status]++;
+            }
+
+            // Tabel Detail RFC
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${row.id}</td>
+                <td>${row.tanggal}</td>
+                <td>${row.owner}</td>
+                <td>${row.initiator}</td>
+                <td>${row.priority}</td>
+                <td>${row.time}</td>
+                <td>${row.budget}</td>
+                <td>${row.status}</td>
+                <td><a href="${row.file_path}" target="_blank">Download</a></td>
+                <td><a href="userdetailrfc.php?id=${row.id}" class="view-btn">Lihat Detail</a></td>
+
+            `;
+            rfcTableBody.appendChild(tr);
+        });
+
+        // Isi tabel summary berdasarkan statusCount
+        for (const status in statusCounts) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${status}</td>
+                <td>${statusCounts[status]}</td>
+            `;
+            statusSummary.appendChild(tr);
+        }
+        console.log(data); // Debugging untuk memastikan data JSON sudah diterima dengan benar
+
+    </script>
 </body>
 </html>

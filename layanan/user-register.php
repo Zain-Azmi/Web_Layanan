@@ -60,7 +60,7 @@ require 'fungsi.php';
         $konfirmasipassword = $_POST['confirmPassword'];
 
         // Cek apakah username sudah ada
-        $sqlcheckusername = "SELECT username FROM admin WHERE username=?";
+        $sqlcheckusername = "SELECT username FROM user WHERE username=?";
         $stmtcheckusername = $koneksi->prepare($sqlcheckusername);
         $stmtcheckusername->bind_param("s", $username);
         $stmtcheckusername->execute();
@@ -68,7 +68,7 @@ require 'fungsi.php';
 
         if ($stmtcheckusername->num_rows > 0) {
             echo "<script type='text/javascript'>
-                window.location.href = 'admin-usernameada.php?success=1';
+                window.location.href = 'user-usernameada.php?success=1';
             </script>";
             $usernamesalah = "inputsalah";
             $passwordsalah = "";
@@ -77,12 +77,12 @@ require 'fungsi.php';
             $usernamesalah = "";
             if ($password !== $konfirmasipassword) {
                 echo "<script type='text/javascript'>
-                window.location.href = 'admin-konfirmasipassword.php?success=1';
+                window.location.href = 'user-konfirmasipassword.php?success=1';
             </script>";
                 $passwordsalah = "inputsalah";
             } else {
-                // Tambahkan admin baru
-                $sqlinsertuser = "INSERT INTO admin (username, password) VALUES (?, ?)";
+                // Tambahkan user baru
+                $sqlinsertuser = "INSERT INTO user (username, password) VALUES (?, ?)";
                 $stmtinsertuser = $koneksi->prepare($sqlinsertuser);
                 if (!$stmtinsertuser) {
                     die('Error: ' . $koneksi->error);
@@ -91,7 +91,7 @@ require 'fungsi.php';
 
                 if ($stmtinsertuser->execute()) {
                     echo "<script type='text/javascript'>
-                            window.location.href = 'admin-registerberhasil.php?success=1';
+                            window.location.href = 'user-registerberhasil.php?success=1';
                         </script>";
                 } else {
 
@@ -108,7 +108,7 @@ require 'fungsi.php';
     ?>
 
     <section class="pendaftaran" id="pendaftaran">
-<h2>Register <span>Admin</span></h2>
+<h2>Register <span>User</span></h2>
         <div class="row">
             <form method="post">
             <div class="input-group">
@@ -125,7 +125,7 @@ require 'fungsi.php';
             </div>
             <button type="submit" class="btn" name="register" id="register">Register</button>
             <br><br>
-            <div class="small">Sudah punya akun? <a href="admin.php"><b>Login</b></a> di sini
+            <div class="small">Sudah punya akun? <a href="user.php"><b>Login</b></a> di sini
             </form>
         </div>
     </section>

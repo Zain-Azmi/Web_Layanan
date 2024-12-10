@@ -1,4 +1,34 @@
+<?php
 
+session_start();
+
+if (!isset($_SESSION['log'])) {
+    // Jika session login tidak ada, redirect ke halaman login
+    header('Location: user.php');
+    exit;
+}
+
+// Ambil user_id dari session
+$user_id = $_SESSION['user_id'];
+$koneksi = mysqli_connect("localhost", "root", "", "layanan");
+function generateUniqueId($koneksi) {
+    // Ambil ID terakhir dari database
+    $query = "SELECT id FROM request_for_change ORDER BY id DESC LIMIT 1";
+    $result = mysqli_query($koneksi, $query);
+    $last_id = mysqli_fetch_assoc($result);
+
+    if ($last_id) {
+        // Mengambil nomor terakhir dan menambah 1
+        $last_number = (int) substr($last_id['id'], -3); // Ambil 3 digit terakhir
+        $new_number = $last_number + 1; // Tambahkan 1
+        $new_id = 'RFC-2024-' . str_pad($new_number, 3, '0', STR_PAD_LEFT); // Format ID baru
+    } else {
+        // Jika belum ada data, mulai dengan RFC-2024-001
+        $new_id = 'RFC-2024-001';
+    }
+
+    return $new_id;
+}?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -151,10 +181,9 @@
         <a href="index.php" class="navbar-logo"></a>
         <img class="logonavbar" src="gambar/layanan.png">
         <div class="navbar-nav">
-            <a href="dashboard.php">Dashboard</a>
+            <a href="userdashboard.php">Dashboard</a>
             <a href="pengajuan.php">Pengajuan</a>
-            <a href="status.php">Status</a>
-            <a href="admin.php">Logout</a>
+            <a href="user-logout.php">Logout</a>
         </div>
 
     </nav>  
@@ -166,7 +195,7 @@
             <div class="input-group">
                 <i data-feather="user"></i>
                 <label for="id">Unique ID:</label>
-            <input type="text" id="id" name="id" required>
+            <input type="text" id="id" name="id" value="<?php echo generateUniqueId($koneksi); ?> "readonly>
             <br>
             </div>
             <div class="input-group">

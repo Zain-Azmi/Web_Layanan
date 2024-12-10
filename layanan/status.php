@@ -285,7 +285,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <img class="logonavbar" src="gambar/layanan.png">
         <div class="navbar-nav">
             <a href="dashboard.php">Dashboard</a>
-            <a href="pengajuan.php">Pengajuan</a>
             <a href="status.php">Status</a>
             <a href="admin.php">Logout</a>
         </div>
